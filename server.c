@@ -5,36 +5,91 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <pthread.h>
-#include <signal.h>
 
-#define MAXNOM 256 //Máximo tamaño de un nombre de archivo.
-#define MAXDAT 65536 //Máximo tamaño de datos que puede ser direccionado con los 2 bytes del header que definen el tamaño.
+#define MAXDAT 65535
+#define MAXCLI 5
+#define MAXNOM 255
 
-// La siguiente estructura es la que se pasa como parámetro a los thread. Se usa una estructura para en un futuro
-// poder expandir la cantidad de parametros en un futuro.
-struct parametros {
-	int fd;
+int conectar();
+void mostrar_datos(u_int16_t, u_int16_t, u_int16_t, u_int16_t, u_int16_t, char*);
+int cargar_mensaje(int, u_int16_t*, u_int16_t*, u_int16_t*, u_int16_t*, u_int16_t*, char*, char*);
+void enviar(int, u_int16_t, u_int16_t, u_int16_t, u_int16_t, u_int16_t, char*);
+u_int16_t ultimo_id(char*);
+
+void crear_archivo(int, char*);
+void eliminar_archivo(int, char*);
+void sincronizar_archivo(int, char*);
+void conectar_archivo(int, char*);
+void editar_archivo(int, u_int16_t, u_int16_t, u_int16_t, u_int16_t, char*);
+void agregar_usuario(int, char*);
+char* ver_archivo_usuario(int);
+
+struct usuarios {
+	int usuario;
+	char archivo[MAXNOM];
+	struct usuarios* siguiente;
 };
 
-void funcion_thread(void *arg); //Función ejecutada por los thread trás su creación.
+struct usuarios* primero;
+struct usuarios* ultimo;
 
-int main() {
-
+int main(int argc, char **argv)
+{
 	int s; //File Descriptor del Socket.
 	int sc; //Accept.
 	socklen_t n; //Tipo de datos utilizado como último parámetro en la aceptación.
-	pthread_t tid; //Tipo de datos utilizado para almacenar la información de thread.
-	struct sockaddr_in server; //Estructura del Socket servidor.
 	struct sockaddr_in cliente; //Estructura del Socket cliente.
-	struct parametros* par; //Puntero a la estructura parametros enviada como argumento a la función funcion_thread().
+	char* buffer; //Aca se almacenan los datos recibidos
+	char* datos; //Aca se almacenan el string.
+	u_int16_t operacion;
+	u_int16_t id; //Indica el id del archivo.
+	u_int16_t accion;
+	u_int16_t posicion; //Indica la posicion dentro del archivo
+	u_int16_t longitud; //Indica el tamaño de los datos (variable)
+	
+	//Inicializacion
+	buffer = malloc(MAXDAT);
+	memset(buffer, 0, MAXDAT);
+	datos = malloc(MAXDAT);
+	memset(datos, 0, MAXDAT);
+	primero = (struct usuarios*) NULL;
+	ultimo = (struct usuarios*) NULL;
 
+	s = conectar();
+	n = sizeof(cliente);
+
+	//While donde se aceptan los clientes
+	while(1) {
+		sc = accept (s, (struct sockaddr *)&cliente, &n);
+		printf("Cliente aceptado: %d.\n", sc);
+					
+		while((cargar_mensaje(sc,&operacion,&id,&accion,&posicion,&longitud,datos,buffer)) > 0){
+			mostrar_datos(operacion,id,accion,posicion,longitud,datos);
+			switch(operacion) {
+				case 1: crear_archivo(sc,datos); break;
+				case 2: eliminar_archivo(sc,datos); break;
+				case 3: sincronizar_archivo(sc, datos); break;
+				case 4: conectar_archivo(sc, datos); break;
+				case 5: editar_archivo(sc, id, accion, posicion, longitud, datos); break;
+			}
+			memset(datos, 0, MAXDAT);
+		}
+	}
+	shutdown(s,2);
+	return 0;
+}
+
+int conectar(){
+	
+	struct sockaddr_in server;
+	int sock;
+	
 	//Creamos el socket.
-	if((s = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+	if((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("Socket");
 		exit(EXIT_FAILURE);
 	}
-
+	
 	//Seteamos el servidor.
 	memset(&server, 0, sizeof(server));
 	server.sin_addr.s_addr = INADDR_ANY;
@@ -42,98 +97,253 @@ int main() {
 	server.sin_port = htons(1111);
 
 	//Bindeamos el servidor.
-	if((bind(s, (struct sockaddr *)&server , sizeof(server))) == -1) {
+	if((bind(sock, (struct sockaddr *)&server , sizeof(server))) == -1) {
 		perror("Bind");
 		exit(EXIT_FAILURE);
 	}
 
 	//Ponemos a las escucha el servidor un máximo de 5 conexiones concurrentes.
-	if((listen (s,5)) == -1) {
+	if((listen (sock,5)) == -1) {
 		perror("Listen");
 		exit(EXIT_FAILURE);
 	}
-
-	n = sizeof(cliente);
-
-	//While donde se aceptan los clientes y se crean los hilos que los atenderán.
-	while(1) {
-		sc = accept (s, (struct sockaddr *)&cliente, &n);
-		par = malloc(sizeof(struct parametros *));
-		printf("Cliente aceptado: %d.\n", sc);
-		par->fd = sc;
-		pthread_create (&tid, NULL, (void *)&funcion_thread, par);
-	}
-	close(s);
-	return 0;
+	
+	return sock;
 }
 
-
-void funcion_thread(void *arg) {
-	int i; //Un simple contador.
-	int fin; //Variable utilizada para el ciclo while.
-	char* nombre; //Aca se almacena el nombre del archivo recibido del cliente.
-	char* datos; //Aca se almacenan los datos a agregar en el archivo recibidos del cliente.
-	char* buffer; //Buffer utilizado para almacenar tanto el nombre del archivo como los datos delimitados por un ";" que luego serán separados.
-	char* q; //Puntero que ayuda en la separación de los parámetros nombre y datos.
-	char* r; //Puntero que ayuda en la separación de los parámetros nombre y datos.
-	struct parametros* pa; //Estructura del tipo parámetros donde se castea los argumentos recibidos de la llamada a la funcion_thread.
-	uint16_t cod; //Código para definir que acción realizar.
-	uint16_t tam; //Código para definir el tamaño del mensaje.
-
-	//Inicialización.
-	nombre = malloc(MAXNOM);
-	memset(nombre, 0, MAXNOM);
+void crear_archivo(int sock, char* nombre){
+	char* datos;
+	FILE* archivo;
+	u_int16_t longitud;
+	u_int16_t id = 0;
+	
 	datos = malloc(MAXDAT);
 	memset(datos, 0, MAXDAT);
+
+	if((archivo = fopen(nombre, "r")) == NULL){
+		archivo = fopen(nombre, "w");
+		fclose(archivo);
+		id = 1;
+		datos = "El archivo fue creado.";
+	} else {
+		datos = "Ya existe un archivo con ese nombre.";
+	}
+	longitud = strlen(datos);	
+	enviar(sock, 1, id, 0, 0, longitud, datos);
+}
+
+void eliminar_archivo(int sock, char* nombre){
+	char* datos;
+	FILE* archivo;
+	u_int16_t longitud;
+	u_int16_t id = 0;
+	
+	datos = malloc(MAXDAT);
+	memset(datos, 0, MAXDAT);
+
+	if((archivo = fopen(nombre, "r")) != NULL){
+		fclose(archivo);
+		remove(nombre);
+		datos = "El archivo fue eliminado.";
+		id = 1;
+	} else {
+		datos = "No existe ningun archivo con ese nombre.";
+	}	
+	longitud = strlen(datos);
+	enviar(sock, 2, id, 0, 0, longitud, datos);
+}
+
+void sincronizar_archivo(int sock, char* nombre){
+	FILE* archivo;
+	char* datos;
+	u_int16_t longitud;
+	u_int16_t id = 0;
+
+	datos = malloc(MAXDAT);
+	memset(datos, 0, MAXDAT);
+	
+	if((archivo = fopen(nombre, "r")) != NULL){
+		fseek(archivo, 0, SEEK_END); // Se posiciona al final del archivo
+		longitud = ftell(archivo); // Devuelve el tamaño del archivo (en bytes)
+		fseek(archivo, 0, SEEK_SET);
+		fread(datos,sizeof(char),longitud,archivo);
+		fclose(archivo);
+		id = 1;
+
+	} else {
+		datos = "No existe ningun archivo con ese nombre.";
+	}
+	longitud = strlen(datos);
+	enviar(sock, 3, id, 0, 0, longitud, datos);
+}
+ 
+u_int16_t ultimo_id(char* nombre){
+	FILE* archivo;
+	char* buf;
+	u_int16_t id = 0;
+	
+	buf = malloc(MAXDAT);
+	memset(buf,0,MAXDAT);
+	
+	if((archivo = fopen(nombre, "r")) != NULL){
+		fseek(archivo, 0, SEEK_SET);
+		if(!feof(archivo)){
+			fread(&id,sizeof(u_int16_t),1,archivo);			
+		}
+		fclose(archivo);
+	}
+	return id;
+}
+
+void conectar_archivo(int sock, char* nombre){	
+	FILE* archivo;
+	char* datos;
+	u_int16_t longitud;
+	u_int16_t id = 0;
+	
+	datos = malloc(MAXDAT);
+	memset(datos, 0, MAXDAT);
+	
+	if((archivo = fopen(nombre, "r")) != NULL){
+		fclose(archivo);
+		agregar_usuario(sock, nombre);
+		datos = "Se ha conectado al archivo.";
+		id = ultimo_id(nombre);
+	} else {
+		datos = "No existe ningun archivo con ese nombre.";
+	}
+	longitud = strlen(datos);
+	enviar(sock, 4, id, 0, 0, longitud, datos);
+}
+
+void enviar(int sock, u_int16_t operacion, u_int16_t id, u_int16_t accion, u_int16_t posicion, u_int16_t longitud, char* datos){
+	char* buffer; //Buffer utilizado para almacenar el mensaje
+
+	operacion = htons(operacion);
+	id = htons(id);
+	accion = htons(accion);
+	posicion = htons(posicion);
+	longitud = htons(longitud);
+	
+	buffer = malloc(10 + ntohs(longitud));
+	memset(buffer, 0, 10 + ntohs(longitud));
+	
+	memcpy(buffer, &operacion, 2);
+	memcpy(buffer+2, &id, 2);
+	memcpy(buffer+4, &accion, 2);
+	memcpy(buffer+6, &posicion, 2);
+	memcpy(buffer+8, &longitud, 2);
+	memcpy(buffer+10, datos, ntohs(longitud));
+	
+	send(sock, buffer, 10 + ntohs(longitud), 0);	
+}
+
+int cargar_mensaje(int sock, u_int16_t* operacion, u_int16_t* id, u_int16_t* accion, u_int16_t* posicion, u_int16_t* longitud, char* datos, char* buffer){
+	int cantidad_leida;
+	
+	while((cantidad_leida = recv(sock,buffer,10,0)) > 0){
+		memcpy(operacion, buffer, 2);
+		*operacion = ntohs(*operacion);
+		memcpy(id, buffer+2, 2);
+		*id = ntohs(*id);
+		memcpy(accion, buffer+4, 2);
+		*accion = ntohs(*accion);
+		memcpy(posicion, buffer+6, 2);
+		*posicion = ntohs(*posicion);
+		memcpy(longitud, buffer+8, 2);
+		*longitud = ntohs(*longitud);
+
+		cantidad_leida += recv(sock,datos, (size_t)*longitud,0);
+		return cantidad_leida;
+	}
+	return cantidad_leida;
+}
+
+void mostrar_datos(u_int16_t operacion, u_int16_t id, u_int16_t accion, u_int16_t posicion, u_int16_t longitud, char* datos){
+	
+	printf("Operacion: %d\n", operacion);
+	printf("ID: %d\n", id);
+	printf("Accion: %d\n", accion);
+	printf("Posicion: %d\n", posicion);
+	printf("Longitud: %d\n", longitud);
+	printf("Datos: %s\n",datos);
+	printf("\n\n");
+}
+
+void editar_archivo(int sock, u_int16_t id, u_int16_t accion, u_int16_t posicion, u_int16_t longitud, char* datos){
+	FILE* archivo;
+	char* buffer;
+	char* aux;
+	int i;
+	
 	buffer = malloc(MAXDAT);
 	memset(buffer, 0, MAXDAT);
-
-	pa = (struct prametros *) arg;
-
-	//Comienzo del ciclo que contiene las acciones por cada código.
-	fin = 1;
-	while(fin) {
-		read(pa->fd, &cod, 2);
-		cod = ntohs(cod);
-		switch(cod) {
-		case 100: //Crear archivo.
-			read(pa->fd, &tam, 2);
-			tam = ntohs(tam);
-			read(pa->fd, nombre, tam);
-			printf("Código: %u. Ahora debería crear un archivo con el nombre: %s.\n", cod, nombre);
-			break;
-		case 200: //Eliminar archivo.
-			read(pa->fd, &tam, 2);
-			tam = ntohs(tam);
-			read(pa->fd, nombre, tam);
-			printf("Código: %u. Ahora debería eliminar el archivo con el nombre: %s.\n", cod, nombre);
-			break;
-		case 300: //Enviar lista de archivos.
-			printf("Código: %u. Ahora deberia enviar la lista de archivo al cliente.\n", cod);
-				//Aca se tiene q enviar la lista de archivos.
-				break;
-		case 400: //Agregar datos al archivo.
-			read(pa->fd, &tam, 2);
-			tam = ntohs(tam);
-			read(pa->fd, buffer, tam);
-			q = strchr(buffer, ';');
-			i = 0;
-			r = buffer;
-			while(r != q) {
-				r++;
-				i++;
+	aux = malloc(MAXDAT);
+	memset(aux, 0, MAXDAT);
+	
+	if((archivo = fopen(ver_archivo_usuario(sock), "r")) != NULL){
+		fseek(archivo, 2, SEEK_SET);
+		if(!feof(archivo)){
+			while (!feof(archivo)){
+				fread(buffer, sizeof(char), 1, archivo);
 			}
-			strncpy(nombre, buffer, i);
-			strncpy(datos, buffer + i + 1, strlen(buffer) - i - 1);
-			printf("Código: %u. Ahora deberia agregar al archivo: %s, los datos: %s.\n", cod, nombre, datos);
-			break;
-		case 500: //Enviar archivo completo.
-			read(pa->fd, &tam, 2);
-			tam = ntohs(tam);
-			read(pa->fd, nombre, tam);
-			printf("Código: %u. Ahora deberia enviar los datos del archivo: %s al cliente\n", cod, nombre);
-				//Aca tengo q enviar los datos al cliente
-			break;
+		}
+		fclose(archivo);
+	}
+	for(i = 0; i < posicion; i++){
+		*(aux+i) = *(buffer+i);
+	}
+	if(accion==1){
+		for(i = 0; i < longitud; i++){
+			*(aux+posicion+i) = *(datos+i);
+		}
+		for(i = 0; i < strlen(buffer) - posicion; i++){
+			*(aux+posicion+longitud+i) = *(buffer+posicion+i);
+		}
+	} else {
+		for(i = 0; i < strlen(buffer) - posicion - longitud; i++){
+			*(aux+posicion+i) = *(buffer+posicion+longitud+i);
 		}
 	}
+	if((archivo = fopen(ver_archivo_usuario(sock), "w")) != NULL){
+		id++;
+		fwrite(&id, sizeof(u_int16_t), 1, archivo);
+		fwrite(aux, strlen(aux), 1, archivo);
+		fclose(archivo);
+	}
+	enviar(sock, 5, id, 0, 0, 0, NULL); //Suele tirar error el NULL
+}
+
+void agregar_usuario(int usuario, char* nombre){
+	int i;
+	struct usuarios* nuevo;
+	nuevo = malloc(sizeof(struct usuarios));
+	memset(nuevo, 0, sizeof(struct usuarios));
+	
+	nuevo->usuario = usuario;
+	for(i = 0; i < strlen(nombre); i++){
+		nuevo->archivo[i] = nombre[i];
+	}
+	nuevo->siguiente = NULL;
+	
+	if (primero == NULL){
+		primero = nuevo;
+		ultimo = nuevo;
+	} else {
+		ultimo->siguiente = nuevo;
+		ultimo = nuevo;
+	}
+}
+
+char* ver_archivo_usuario(int usuario){
+	struct usuarios* aux;
+	aux = primero;
+	
+	while((aux != NULL) & (aux->usuario != usuario)){
+		aux = aux->siguiente;
+	}
+	if (aux != NULL){
+		return aux->archivo;
+	}
+	return NULL;
 }

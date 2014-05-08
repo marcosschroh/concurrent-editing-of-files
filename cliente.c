@@ -6,31 +6,67 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAXNOM 256 //Máximo tamaño de un nombre de archivo.
-#define MAXDAT 65536 //Máximo tamaño de datos que puede ser direccionado con los 2 bytes del header que definen el tamaño.
+#define MAXDAT 65535
+#define MAXNOM 255
 
+char nombre_archivo_actual[MAXNOM];
+char seguir_editando;
 
-int main() {
+int conectar();
+void inicializar();
+void cargar_nombre(char*);
+void mostrar_datos(u_int16_t, u_int16_t, u_int16_t, u_int16_t, u_int16_t, char*);
+void cargar_mensaje(int, u_int16_t*, u_int16_t*, u_int16_t*, u_int16_t*, u_int16_t*, char*, char*);
+void enviar(int, u_int16_t, u_int16_t, u_int16_t, u_int16_t, u_int16_t, char*);
+void escuchar(int);
+int ultimo_id(char*);
+
+void crear_archivo(int);
+void eliminar_archivo(int);
+void sincronizar_archivo(int);
+void conectar_archivo(int);
+void editar_archivo(int, u_int16_t);
+
+void crear_archivo_respuesta(u_int16_t, char*);
+void eliminar_archivo_respuesta(u_int16_t, char*);
+void sincronizar_archivo_respuesta(u_int16_t, u_int16_t, char*);
+void conectar_archivo_respuesta(int, u_int16_t, char*);
+void editar_archivo_respuesta(int sock, u_int16_t id);
+
+int main(int argc, char **argv)
+{
 	int s; //File Descriptor del Socket.
-	int fin; //Variable utilizada para el ciclo while.
-	uint16_t cod; //Código para definir que acción realizar.
-	uint16_t tam; //Código para definir el tamaño del mensaje (nombre).
-	uint16_t tam2; //Código para definir el tamaño del mensaje (datos).
-	char* buffer; //Buffer utilizado para almacenar tanto el nombre del archivo como los datos delimitados por un ";" que luego serán separados.
-	char* nombre; //Aca se almacena el nombre del archivo recibido del cliente.
-	char* datos; //Aca se almacenan los datos a agregar en el archivo recibidos del cliente.
-	struct sockaddr_in server;
-
-	//Inicialización.
-	nombre = malloc(MAXNOM);
-	memset(nombre, 0, MAXNOM);
-	datos = malloc(MAXDAT);
-	memset(datos, 0, MAXDAT);
-
+	int opt; //Variable utilizada para el ciclo 
 	printf("Iniciando el cliente...\n");
 
+	s = conectar();
+	opt = 0;
+
+	while(opt != 7) {
+		inicializar();
+		printf("Elija opción: \n");
+		printf("1- Crear archivo.\n2- Borrar archivo.\n3- Sincronizar archivo.\n4- Editar archivo.\n7- Para salir.\nEleccion: ");
+		scanf("%d", &opt);
+		printf("\n");
+		switch(opt) {
+			case 1: crear_archivo(s); break;
+			case 2:	eliminar_archivo(s); break;
+			case 3: sincronizar_archivo(s); break;
+			case 4: conectar_archivo(s); break;
+			case 7: printf("Adios!\n"); shutdown(s, 2); return(EXIT_SUCCESS);
+			default: printf("El número ingresado no concuerda con ninguna opción.\n"); break;
+		}
+	}
+	return 0;
+}
+
+int conectar(){
+	
+	struct sockaddr_in server;
+	int sock;
+	
 	//Creamos el socket.
-	if((s = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+	if((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("Socket");
 		exit(EXIT_FAILURE);
 	}
@@ -42,83 +78,284 @@ int main() {
 	server.sin_port = htons(1111);
 
 	//Conectamos con el servidor.
-	if (connect(s,(struct sockaddr *)&server,sizeof(server)) == -1) {
+	if (connect(sock,(struct sockaddr *)&server,sizeof(server)) == -1) {
 		perror("Bind");
 		exit(EXIT_FAILURE);
 	}
+	
+	return sock;
+}
 
-	//While donde elejimos la opción a realizar y enviamos un mensaje al servidor con dicha elección.
-	fin = 0;
-	while( fin != 6) {
-		printf("Elija opción: \n");
-		printf("1- Crear archivo.\n2- Borrar archivo.\n3- Solicitar lista.\n4- Enviar datos.\n5- Recibir datos.\n6- Para salir.\n");
-		scanf("%d", &fin);
-		switch(fin) {
-		case 1: //Crear archivo.
-			printf("Ingrese nombre del archivo a crear: ");
-			scanf("%s", nombre);
-			cod = htons(100);
-			tam = htons(strlen(nombre));
-			buffer = malloc(4 + tam);
-			memcpy(buffer, &cod, 2);
-			memcpy(buffer + 2, &tam, 2);
-			memcpy(buffer + 4, nombre, tam);
-			send(s, buffer, 4 + tam, 0);
-			break;
-		case 2: //Eliminar archivo.
-			printf("Ingrese nombre del archivo a borrar: ");
-			scanf("%s", nombre);
-			cod = htons(200);
-			tam = htons(strlen(nombre));
-			buffer = malloc(4 + tam);
-			memcpy(buffer, &cod, 2);
-			memcpy(buffer + 2, &tam, 2);
-			memcpy(buffer + 4, nombre, tam);
-			send(s, buffer, 4 + tam, 0);
-			break;
-		case 3: //Solicitar lista de archivos.
-			printf("Solicitando lista.\n");
-			cod = htons(300);
-			buffer = malloc(2);
-			memcpy(buffer, &cod, 2);
-			send(s, buffer, 2, 0);
+void crear_archivo(int sock){
+	char nombre[MAXNOM]; //Aca se almacenan los datos a enviar al servidor.
+	u_int16_t longitud; //Indica el tamaño de los datos (variable)
 
-			//Aca tengo q empezar a leer datos.
+	printf("Ingrese el nombre del archivo a crear: ");
+	scanf("%s",nombre);
 
-			break;
-		case 4: //Agregar datos al archivo.
-			printf("Ingrese nombre del archivo a enviar datos: ");
-			scanf("%s", nombre);
-			printf("Ingrese datos a enviar: ");
-			scanf("%s", datos);
-			tam = strlen(nombre);
-			tam2 = strlen(datos);
-			buffer = malloc(4 + tam + 1 + tam2);
-			cod = htons(400);
-			tam = htons(tam) + htons(tam2) + 1;
-			memcpy(buffer, &cod, 2);
-			memcpy(buffer + 2, &tam, 2);
-			sprintf(buffer + 4, "%s;%s", nombre, datos);
-			send(s, buffer, 4 + tam, 0);
-			break;
-		case 5: //Recibir archivo completo.
-			printf("Ingrese nombre del archivo a recibir: ");
-			scanf("%s", nombre);
-			cod = htons(500);
-			tam = htons(strlen(nombre));
-			buffer = malloc(4 + tam);
-			memcpy(buffer, &cod, 2);
-			memcpy(buffer + 2, &tam, 2);
-			memcpy(buffer + 4, nombre, tam);
-			send(s, buffer, 4 + tam, 0);
-			//Aca hay q empezar a leer los datos
-			break;
-		case 6:
-			break;
-		default:
-			printf("El número ingresado no concuerda con ninguna opción.\n");
-			break;
+	cargar_nombre(nombre);
+	
+	longitud = strlen(nombre);
+
+	enviar(sock, 1, 0, 0, 0, longitud, nombre);
+	
+	escuchar(sock);
+}
+
+void eliminar_archivo(int sock) {
+	char nombre[MAXNOM]; //Aca se almacenan los datos a enviar al servidor.
+	u_int16_t longitud; //Indica el tamaño de los datos (variable)
+
+	printf("Ingrese el nombre del archivo a eliminar: ");
+	scanf("%s",nombre);
+
+	cargar_nombre(nombre);
+		
+	longitud = strlen(nombre);
+	
+	enviar(sock, 2, 0, 0, 0, longitud, nombre);
+	
+	escuchar(sock);
+}
+
+void sincronizar_archivo(int sock){
+	char nombre[MAXNOM]; //Buffer utilizado para almacenar el mensaje
+	u_int16_t longitud; //Indica el tamaño de los datos (variable)
+
+	printf("Ingrese el nombre del archivo a solicitar: ");
+	scanf("%s",nombre);
+	
+	cargar_nombre(nombre);
+	
+	longitud = strlen(nombre);
+		
+	enviar(sock, 3, 0, 0, 0, longitud, nombre);
+	
+	escuchar(sock);
+}
+
+void conectar_archivo(int sock){
+	char nombre[MAXNOM]; //Aca se almacenan los datos a enviar al servidor.
+	u_int16_t longitud; //Indica el tamaño de los datos (variable)
+
+	
+	printf("Ingrese el nombre del archivo a conectartse para editar: ");
+	scanf("%s",nombre);
+
+	cargar_nombre(nombre);
+	
+	longitud = strlen(nombre);
+	
+	enviar(sock, 4, 0, 0, 0, longitud, nombre);
+}
+
+int ultimo_id(char* nombre){
+	FILE* archivo;
+	char* buf;
+	int id = 0;
+	
+	buf = malloc(MAXDAT);
+	memset(buf,0,MAXDAT);
+	
+	if((archivo = fopen(nombre, "r")) != NULL){
+		fseek(archivo, 0, SEEK_SET);
+		if(!feof(archivo)){
+			fread(&id,sizeof(u_int16_t),1,archivo);			
 		}
+		fclose(archivo);
 	}
-	close(s);
+	return id;
+}
+
+void cargar_nombre(char* nombre){
+	int i;
+	
+	for(i = 0; i < strlen(nombre); i++){
+		nombre_archivo_actual[i] = nombre[i];
+	}
+}
+
+void inicializar(){
+	int i;
+	
+	for(i = 0; i < MAXNOM; i++){
+		nombre_archivo_actual[i] = 0;
+	}
+}
+
+void enviar(int sock, u_int16_t operacion, u_int16_t id, u_int16_t accion, u_int16_t posicion, u_int16_t longitud, char* datos){
+	char* buffer; //Buffer utilizado para almacenar el mensaje
+
+	operacion = htons(operacion);
+	id = htons(id);
+	accion = htons(accion);
+	posicion = htons(posicion);
+	longitud = htons(strlen(datos));
+
+	buffer = malloc(10 + ntohs(longitud));
+	memset(buffer, 0, 10 + ntohs(longitud));
+
+	memcpy(buffer, &operacion, 2);
+	memcpy(buffer+2, &id, 2);
+	memcpy(buffer+4, &accion, 2);
+	memcpy(buffer+6, &posicion, 2);
+	memcpy(buffer+8, &longitud, 2);
+	memcpy(buffer+10, datos, ntohs(longitud));
+
+	send(sock, buffer, 10 + ntohs(longitud), 0);	
+}
+
+void escuchar(int sock){
+	char* datos; //Aca se almacenan el string.
+	char* buffer; //Aca se almacenan los datos recibidos
+	u_int16_t operacion; //Indica la operacion a realizar
+	u_int16_t id; //Indica el id del archivo.
+	u_int16_t accion; //Indica la accion a realizar
+	u_int16_t posicion; //Indica la posicion dentro del archivo
+	u_int16_t longitud; //Indica el tamaño de los datos (variable)
+	
+	buffer = malloc(MAXDAT);
+	memset(buffer, 0, MAXDAT);
+	datos = malloc(MAXDAT);
+	memset(datos, 0, MAXDAT);
+	
+	cargar_mensaje(sock,&operacion,&id,&accion,&posicion,&longitud,datos,buffer);
+	mostrar_datos(operacion,id,accion,posicion,longitud,datos);
+	switch(operacion){
+		case 1:
+			crear_archivo_respuesta(id,datos); break;
+		case 2:
+			eliminar_archivo_respuesta(id,datos); break;
+		case 3:
+			sincronizar_archivo_respuesta(id, longitud, datos); break;
+		case 4:
+			conectar_archivo_respuesta(sock, id, datos); break;
+		case 5:
+			editar_archivo_respuesta(sock, id); break;
+		default:
+			printf("Error en la recepcion del mensaje.\n"); break;
+	}
+}
+
+void cargar_mensaje(int sock, u_int16_t* operacion, u_int16_t* id, u_int16_t* accion, u_int16_t* posicion, u_int16_t* longitud, char* datos, char* buffer){
+	int cantidad_leida;
+	
+	cantidad_leida = recv(sock,buffer,10,0);
+	memcpy(operacion, buffer, 2);
+	*operacion = ntohs(*operacion);
+	memcpy(id, buffer+2, 2);
+	*id = ntohs(*id);
+	memcpy(accion, buffer+4, 2);
+	*accion = ntohs(*accion);
+	memcpy(posicion, buffer+6, 2);
+	*posicion = ntohs(*posicion);
+	memcpy(longitud, buffer+8, 2);
+	*longitud = ntohs(*longitud);
+		
+	cantidad_leida += recv(sock,datos,(size_t)*longitud,0);
+}
+
+void mostrar_datos(u_int16_t operacion, u_int16_t id, u_int16_t accion, u_int16_t posicion, u_int16_t longitud, char* datos){
+	
+	printf("Operacion: %d\n", operacion);
+	printf("ID: %d\n", id);
+	printf("Accion: %d\n", accion);
+	printf("Posicion: %d\n", posicion);
+	printf("Longitud: %d\n", longitud);
+	printf("Datos: %s\n",datos);
+	printf("\n\n");
+}
+
+void crear_archivo_respuesta(u_int16_t id, char* datos){
+	FILE* archivo;
+	
+	if(id == 1){
+		archivo = fopen(nombre_archivo_actual, "w");
+		fclose(archivo);
+	}
+	printf("\n%s\n\n",datos);
+}
+
+void eliminar_archivo_respuesta(u_int16_t id, char* datos){
+	
+	if(id == 1){
+		remove(nombre_archivo_actual);
+	}
+	printf("\n%s\n\n",datos);
+}
+
+void sincronizar_archivo_respuesta(u_int16_t id, u_int16_t longitud, char* datos){
+	FILE* archivo;
+	char* buffer;
+	
+	buffer = malloc(MAXDAT);
+	memset(buffer, 0, MAXDAT);
+
+	if(id == 1) {
+		archivo = fopen(nombre_archivo_actual, "w");
+		fwrite(datos, sizeof(char), longitud, archivo);
+		fclose(archivo);
+		printf("Sincronizacion correcta.");
+	}
+	printf("\n%s\n\n",datos);
+}
+
+void conectar_archivo_respuesta(int sock, u_int16_t id, char* datos){
+	printf("\n%s\n\n", datos);
+	
+	if(id != 0){
+		editar_archivo(sock, id);
+	}	
+}
+
+void editar_archivo(int socket, u_int16_t id){
+	FILE* archivo;
+	char accion;
+	char posicion;
+	char longitud;
+	char* datos;
+	char* buffer;
+	
+	datos = malloc(MAXDAT);
+	memset(datos,0,MAXDAT);
+	buffer = malloc(MAXDAT);
+	memset(buffer,0,MAXDAT);
+	
+	if(ultimo_id(nombre_archivo_actual) != id){
+		enviar(socket, 3, 0, 0, 0, strlen(nombre_archivo_actual), nombre_archivo_actual); //Sincronizamos
+		escuchar(socket);
+	}
+	if((archivo = fopen(nombre_archivo_actual, "r")) != NULL){
+		fseek(archivo, 2, SEEK_SET);
+		if(!feof(archivo)){
+			while (!feof(archivo)){
+				fread(buffer, sizeof(char), 1, archivo);
+			}
+		}
+		fclose(archivo);
+	}
+	printf(buffer); //Mostramos el archivo
+	printf("Ingrese accion (1: Agregar, 2: Borrar):");
+	scanf(&accion);
+	printf("Ingrese posicion:");
+	scanf(&posicion);
+	if(accion == 1){
+		printf("Ingrese datos:");
+	} else {
+		printf("Ingrese cantidad de caracteres a borrar");
+	}
+	scanf("%s",datos);	
+	longitud = sizeof(datos);
+	id++;
+	printf("Desea seguir editando este archivo? (1: Si, 0: No):");
+	scanf(&seguir_editando);
+	enviar(socket, 5, id, accion, posicion, longitud, datos);
+	escuchar(socket);
+}
+
+void editar_archivo_respuesta(int sock, u_int16_t id){
+	
+	if(seguir_editando != 1){
+		editar_archivo(sock, id);
+	}
 }

@@ -25,12 +25,8 @@ int main(int argc, char **argv)
     sockfd = start_server();
     sin_size = sizeof(struct sockaddr_in);
 
-    if ( (sock_client = accept(sockfd, (struct sockaddr *)&cliente, &sin_size) ) == -1 ){
-        perror("accept");
-        exit(EXIT_FAILURE);
-    }
+    while ( (sock_client = accept(sockfd, (struct sockaddr *)&cliente, &sin_size) ) ){
 
-    while(sock_client) {
         printf("Client acepted:\n");
         param_thread->sock_client = sock_client;
 
@@ -40,7 +36,10 @@ int main(int argc, char **argv)
         }
     }
 
-    shutdown(sockfd, 2);
+    perror("accept");
+    exit(EXIT_FAILURE);
+
+    //shutdown(sockfd, 2);
 
     return 0;
 }
@@ -93,9 +92,10 @@ void *connection_handler(void *param_thread)
 
     //Receive a message from client
     while ( total_read = recv(sock_client, buffer, MAXBUFFERSIZE - 1, 0) > 0 ){
-        printf("Total bytes read is: %d\n", total_read);
-        printf("%s\n", buffer);
-        memset(buffer, 0, total_read);
+        printf("Total bytes read is: %d\n", strlen(buffer));
+        printf("The buffer's content is: %s\n", buffer);
+        memset(buffer, 0, strlen(buffer));
+        printf("The buffer's content is: %s\n", buffer);
         //Send the message back to client
         //write(sock , client_message , strlen(client_message));
     }

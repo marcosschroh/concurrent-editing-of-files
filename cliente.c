@@ -27,6 +27,8 @@ int main(int argc, char **argv)
             perror("send");
             exit(EXIT_FAILURE);
         }
+        printf("Sending the message:%s with total bytes: %d \n\n", message, strlen(message));
+        memset(message, 0, strlen(message));
     }
 
     return 0;

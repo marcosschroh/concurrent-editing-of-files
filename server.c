@@ -39,8 +39,6 @@ int main(int argc, char **argv)
     perror("accept");
     exit(EXIT_FAILURE);
 
-    //shutdown(sockfd, 2);
-
     return 0;
 }
 
@@ -95,9 +93,6 @@ void *connection_handler(void *param_thread)
         printf("Total bytes read is: %d\n", strlen(buffer));
         printf("The buffer's content is: %s\n", buffer);
         memset(buffer, 0, strlen(buffer));
-        printf("The buffer's content is: %s\n", buffer);
-        //Send the message back to client
-        //write(sock , client_message , strlen(client_message));
     }
 
     if(total_read < 0){

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include<netdb.h>    //hostent
 
 #include "include/cliente.h"
 
@@ -15,7 +16,12 @@ int main(int argc, char **argv)
     char message[MAXDATASIZE] = "\0";
     //char *server_reply;
 
-    sockfd = start_client();
+    if (argc != 2) {
+        fprintf(stderr,"usage: client hostname\n");
+        exit(1);
+    }
+
+    sockfd = start_client(argv[1]);
     operation = 0;
 
     while(1) {
@@ -34,12 +40,22 @@ int main(int argc, char **argv)
     return 0;
 }
 
-int start_client(){
+int start_client(char *server_name){
 
     struct sockaddr_in server; // server’s address information
-    int sockfd;
+    int sockfd, i;
+    struct hostent *he;
+    struct in_addr **addr_list;
 
     printf("Iniciando el cliente...\n");
+
+    if ( (he=gethostbyname(server_name) ) == NULL ) {
+        perror("gethostbyname");
+        exit(1);
+    }
+
+    printf("resolved to : %s\n" , server_name);
+    printf("IP Address is: %s\n", inet_ntoa(*((struct in_addr *)he->h_addr)));
 
     //Create the socket.
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -50,7 +66,7 @@ int start_client(){
         memset(&server, 0, sizeof(server)); // zero the rest of the struct
         server.sin_family = AF_INET; // host byte order
         server.sin_port = htons(MYPORT); // short, network byte order
-        server.sin_addr.s_addr = INADDR_ANY;
+        server.sin_addr = *((struct in_addr *)he->h_addr);
 
         //Conectamos con el servidor.
         if (connect(sockfd, (struct sockaddr *)&server, sizeof(server)) == -1) {

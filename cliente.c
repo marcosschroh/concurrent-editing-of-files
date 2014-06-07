@@ -13,8 +13,10 @@ int main(int argc, char **argv)
 {
     int sockfd; //File Descriptor del Socket.
     int operation; //Variable utilizada para el ciclo
-    char message[MAXDATASIZE] = "\0";
+    char* data; //variable utilizada para alamcenar los datos
     //char *server_reply;
+    uint16_t code, size;
+    char buffer[HEADER_CODE_LENGTH + MAXDATASIZE];
 
     if (argc != 2) {
         fprintf(stderr,"usage: client hostname\n");
@@ -26,15 +28,24 @@ int main(int argc, char **argv)
 
     while(1) {
 
+        data = malloc(MAXDATASIZE);
+        memset(data, 0, MAXDATASIZE);
         printf("Enter a message\n");
-        scanf("%s", &message);
+        scanf("%s", data);
+        code = htons(100);
+        printf("Size of code: %d\n", sizeof(code));
+        printf("The code is:  %u\n", code);
+        printf("The code is:  %d\n", ntohs(code));
 
-        if ( (send(sockfd , message , strlen(message) , 0)) == -1){
+        memset(buffer, 0, HEADER_CODE_LENGTH + MAXDATASIZE);
+        memcpy(buffer, &code, HEADER_CODE_LENGTH);
+
+        if ( (send(sockfd, buffer, HEADER_CODE_LENGTH, 0)) == -1){
             perror("send");
             exit(EXIT_FAILURE);
         }
-        printf("Sending the message:%s with total bytes: %d \n\n", message, strlen(message));
-        memset(message, 0, strlen(message));
+
+        memset(data, 0, strlen(data));
     }
 
     return 0;

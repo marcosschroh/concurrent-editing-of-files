@@ -8,6 +8,7 @@
 #include <pthread.h>
 
 #include "include/server.h"
+#include "include/protocol.h"
 
 struct parameters_to_thread {
     int sock_client;
@@ -81,26 +82,33 @@ void *connection_handler(void *param_thread)
     //Get the socket descriptor
     int sock_client;
     int total_read;
+    int end = 1;
     struct parameters_to_thread *parameters;
     //char *message , client_message[MAXBUFFERSIZE];
-    char buffer[MAXBUFFERSIZE]; // Store the daya recived.
+    uint16_t code, len_message;
+    char * message;
+    char buffer[MAX_SIZE]; // Store the daya recived.
 
     parameters = (struct parameters_to_thread *) param_thread;
     sock_client = parameters->sock_client;
 
     //Receive a message from client
-    while ( total_read = recv(sock_client, buffer, MAXBUFFERSIZE - 1, 0) > 0 ){
-        printf("Total bytes read is: %d\n", strlen(buffer));
-        printf("The buffer's content is: %s\n", buffer);
-        memset(buffer, 0, strlen(buffer));
+    while (end){
+
+        total_read = parse_message(sock_client, &code, &len_message);
+
+        if(total_read < 0){
+            perror("recv");
+            exit(EXIT_FAILURE);
+            //puts("Client disconnected");
+            //fflush(stdout);
+        }
+
+        printf("Total bytes read is: %d\n", total_read);
+        printf("The code is: %u\n", code);
+
     }
 
-    if(total_read < 0){
-        perror("recv");
-        exit(EXIT_FAILURE);
-        //puts("Client disconnected");
-        //fflush(stdout);
-    }
 
     //Free the socket pointer
     //free(sock_client);

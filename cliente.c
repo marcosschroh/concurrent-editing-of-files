@@ -12,11 +12,10 @@
 int main(int argc, char **argv)
 {
     int sockfd; //File Descriptor del Socket.
-    int operation; //Variable utilizada para el ciclo
+    int operation, l; //Variable utilizada para el ciclo
     char* data; //variable utilizada para alamcenar los datos
-    //char *server_reply;
-    uint16_t code, size;
-    char buffer[HEADER_CODE_LENGTH + MAXDATASIZE];
+    uint16_t code, size_message;
+    char buffer[TOTAL_SIZE];
 
     if (argc != 2) {
         fprintf(stderr,"usage: client hostname\n");
@@ -28,19 +27,23 @@ int main(int argc, char **argv)
 
     while(1) {
 
-        data = malloc(MAXDATASIZE);
-        memset(data, 0, MAXDATASIZE);
+        data = malloc(MAX_DATA_SIZE);
+        memset(data, 0, MAX_DATA_SIZE);
         printf("Enter a message\n");
         scanf("%s", data);
         code = htons(100);
-        printf("Size of code: %d\n", sizeof(code));
-        printf("The code is:  %u\n", code);
-        printf("The code is:  %d\n", ntohs(code));
 
-        memset(buffer, 0, HEADER_CODE_LENGTH + MAXDATASIZE);
-        memcpy(buffer, &code, HEADER_CODE_LENGTH);
+        size_message = htons(strlen(data));
+        printf("Data: %s\n", data);
+        printf("Total size message: %u\n", size_message );
+        memset(buffer, 0, TOTAL_SIZE);
+        memcpy(buffer, &code, CODE_LENGTH);
+        memcpy(buffer + CODE_LENGTH, &size_message , MESSAGE_LENGTH);
+        memcpy(buffer + HEADER_LENGTH, data, strlen(data));
 
-        if ( (send(sockfd, buffer, HEADER_CODE_LENGTH, 0)) == -1){
+        printf("Size data %d\n", strlen(data));
+
+        if ( (send(sockfd, buffer, HEADER_LENGTH + strlen(data), 0)) == -1){
             perror("send");
             exit(EXIT_FAILURE);
         }

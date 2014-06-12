@@ -85,9 +85,8 @@ void *connection_handler(void *param_thread)
     int end = 1;
     struct parameters_to_thread *parameters;
     //char *message , client_message[MAXBUFFERSIZE];
-    uint16_t code, len_message;
-    char * message;
-    char buffer[MAX_SIZE]; // Store the daya recived.
+    uint16_t code=0, size_message=0;
+    char buffer[TOTAL_SIZE]="\0", message[MAX_DATA_SIZE]="\0"; // Store the daya recived.
 
     parameters = (struct parameters_to_thread *) param_thread;
     sock_client = parameters->sock_client;
@@ -95,7 +94,7 @@ void *connection_handler(void *param_thread)
     //Receive a message from client
     while (end){
 
-        total_read = parse_message(sock_client, &code, &len_message);
+        total_read = parse_message(sock_client, &code, &size_message, message);
 
         if(total_read < 0){
             perror("recv");
@@ -104,10 +103,13 @@ void *connection_handler(void *param_thread)
             //fflush(stdout);
         }
 
-        printf("Total bytes read is: %d\n", total_read);
         printf("The code is: %u\n", code);
-
+        printf("The message size is: %u\n", size_message);
+        printf("The data is: %s\n", message);
+        printf("Total bytes read is: %d\n", total_read);
+        memset(message, 0, MAX_DATA_SIZE);
     }
+
 
 
     //Free the socket pointer

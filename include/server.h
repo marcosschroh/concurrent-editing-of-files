@@ -4,3 +4,4 @@
 
 int start_server();
 void *connection_handler(void *);
+int create_dir(const char *);

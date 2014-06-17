@@ -34,8 +34,10 @@ int parse_message(int sock_client, uint16_t *code, uint16_t *size, char message[
     *size = ntohs(size_message);
     total_read += bytes_read;
 
-    bytes_read = read_n_bytes(sock_client, message, ntohs(size_message));
-    total_read += bytes_read;
+    if(*size > 0){
+        bytes_read = read_n_bytes(sock_client, message, ntohs(size_message));
+        total_read += bytes_read;
+    }
 
     return total_read;
 }

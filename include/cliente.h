@@ -7,3 +7,4 @@
 #define TOTAL_SIZE CODE_LENGTH + MESSAGE_LENGTH + MAX_DATA_SIZE
 
 int start_client(char *);
+void show_options(int *);

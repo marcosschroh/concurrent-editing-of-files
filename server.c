@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <sys/stat.h>
 
 #include "include/server.h"
 #include "include/protocol.h"
@@ -22,6 +23,16 @@ int main(int argc, char **argv)
     struct sockaddr_in cliente; // Connector’s address information
     struct parameters_to_thread *param_thread;
     pthread_t tid; // Data types to store the data recived on a thread.
+
+    if (argc != 2) {
+        fprintf(stderr,"usage: give a Dir Name\n");
+        exit(1);
+    }
+
+    if (!create_dir(argv[1])){
+        printf("An error has been ocurrer");
+        exit(0);
+    }
 
     sockfd = start_server();
     sin_size = sizeof(struct sockaddr_in);
@@ -92,7 +103,7 @@ void *connection_handler(void *param_thread)
     sock_client = parameters->sock_client;
 
     //Receive a message from client
-    while (end){
+    while (code != 600){
 
         total_read = parse_message(sock_client, &code, &size_message, message);
 
@@ -104,16 +115,38 @@ void *connection_handler(void *param_thread)
         }
 
         printf("The code is: %u\n", code);
+
         printf("The message size is: %u\n", size_message);
         printf("The data is: %s\n", message);
         printf("Total bytes read is: %d\n", total_read);
         memset(message, 0, MAX_DATA_SIZE);
+
+
+        if (code == 600){
+            printf("Bye\n");
+            break;
+        }
     }
 
 
+    //close the socket
+    close(sock_client);
 
-    //Free the socket pointer
-    //free(sock_client);
+}
+
+
+int create_dir(const char *path)
+{
+    struct stat info;
+    int e;
+
+    if(info.st_mode & S_IFDIR){
+        printf("Directory already exists\n");
+    }else{
+        printf("Creating directory\n");
+        mkdir(path, 0777);
+        return 1;
+    }
 
     return 0;
 }

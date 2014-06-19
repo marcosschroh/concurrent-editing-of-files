@@ -24,15 +24,8 @@ int main(int argc, char **argv)
     struct parameters_to_thread *param_thread;
     pthread_t tid; // Data types to store the data recived on a thread.
 
-    if (argc != 2) {
-        fprintf(stderr,"usage: give a Dir Name\n");
-        exit(1);
-    }
 
-    if (!create_dir(argv[1])){
-        printf("An error has been ocurrer");
-        exit(0);
-    }
+    create_dir();
 
     sockfd = start_server();
     sin_size = sizeof(struct sockaddr_in);
@@ -135,18 +128,13 @@ void *connection_handler(void *param_thread)
 }
 
 
-int create_dir(const char *path)
+int create_dir()
 {
     struct stat info;
-    int e;
 
-    if(info.st_mode & S_IFDIR){
-        printf("Directory already exists\n");
-    }else{
-        printf("Creating directory\n");
-        mkdir(path, 0777);
-        return 1;
+    if ( mkdir(FILES_STORE_DIR, 0777) == 0){
+        printf("Creating directory to store the share files....\n");
     }
 
-    return 0;
+    return 1;
 }

@@ -10,6 +10,7 @@
 
 #include "include/server.h"
 #include "include/protocol.h"
+#include "include/file_manager.h"
 
 struct parameters_to_thread {
     int sock_client;
@@ -90,7 +91,7 @@ void *connection_handler(void *param_thread)
     struct parameters_to_thread *parameters;
     //char *message , client_message[MAXBUFFERSIZE];
     uint16_t code=0, size_message=0;
-    char buffer[TOTAL_SIZE]="\0", message[MAX_DATA_SIZE]="\0"; // Store the daya recived.
+    char buffer[TOTAL_SIZE]="\0", message_recive[MAX_DATA_SIZE]="\0"; // Store the daya recived.
 
     parameters = (struct parameters_to_thread *) param_thread;
     sock_client = parameters->sock_client;
@@ -98,7 +99,7 @@ void *connection_handler(void *param_thread)
     //Receive a message from client
     while (code != 600){
 
-        total_read = parse_message(sock_client, &code, &size_message, message);
+        total_read = parse_message(sock_client, &code, &size_message, message_recive);
 
         if(total_read < 0){
             perror("recv");
@@ -107,26 +108,31 @@ void *connection_handler(void *param_thread)
             //fflush(stdout);
         }
 
+/*
         printf("The code is: %u\n", code);
-
         printf("The message size is: %u\n", size_message);
-        printf("The data is: %s\n", message);
+        printf("The data is: %s\n", message_recive);
         printf("Total bytes read is: %d\n", total_read);
-        memset(message, 0, MAX_DATA_SIZE);
+*/
+        //memset(message_recive, 0, MAX_DATA_SIZE);
 
+        switch (code){
+            case 100:
+                create_file(sock_client, size_message, message_recive);
+                break;
 
-        if (code == 600){
-            printf("Bye\n");
-            break;
+            case 600:
+                printf("Bye\n");
+                break;
         }
+
+        memset(message_recive, 0, MAX_DATA_SIZE);
     }
 
 
     //close the socket
     close(sock_client);
-
 }
-
 
 int create_dir()
 {
@@ -138,3 +144,4 @@ int create_dir()
 
     return 1;
 }
+

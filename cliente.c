@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 
             case 1:
                 code = htons(100);
-                printf("Enter a message\n");
+                printf("Enter the name of the file\n");
                 scanf("%s", data);
 
                 size_message = htons(strlen(data));

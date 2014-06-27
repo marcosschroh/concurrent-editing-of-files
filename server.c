@@ -92,6 +92,7 @@ void *connection_handler(void *param_thread)
     //char *message , client_message[MAXBUFFERSIZE];
     uint16_t code=0, size_message=0;
     char buffer[TOTAL_SIZE]="\0", message_recive[MAX_DATA_SIZE]="\0"; // Store the daya recived.
+    char message_send[MAX_DATA_SIZE] = "\0";
 
     parameters = (struct parameters_to_thread *) param_thread;
     sock_client = parameters->sock_client;
@@ -118,7 +119,11 @@ void *connection_handler(void *param_thread)
 
         switch (code){
             case 100:
-                create_file(sock_client, size_message, message_recive);
+                strcpy(message_send, "The File already exist");
+                if (create_file(sock_client, size_message, message_recive) == 1){
+                    strcpy(message_send, "File created with success");
+                }
+                printf("%s\n", message_send);
                 break;
 
             case 600:
@@ -127,6 +132,7 @@ void *connection_handler(void *param_thread)
         }
 
         memset(message_recive, 0, MAX_DATA_SIZE);
+        memset(message_send, 0, MAX_DATA_SIZE);
     }
 
 

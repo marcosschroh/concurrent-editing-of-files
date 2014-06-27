@@ -8,14 +8,15 @@
 #include<netdb.h>    //hostent
 
 #include "include/cliente.h"
+#include "include/protocol.h"
+
 
 int main(int argc, char **argv)
 {
     int sockfd; //File Descriptor del Socket.
     int option=0; //Variable utilizada para el ciclo
     char* data; //variable utilizada para alamcenar los datos
-    uint16_t code=0, size_message=0;
-    char buffer[TOTAL_SIZE];
+    uint16_t code=0;
 
     if (argc != 2) {
         fprintf(stderr,"usage: give a Client Hostname\n");
@@ -36,15 +37,7 @@ int main(int argc, char **argv)
                 code = htons(100);
                 printf("Enter the name of the file\n");
                 scanf("%s", data);
-
-                size_message = htons(strlen(data));
-                printf("Data: %s\n", data);
-                printf("Total size message: %u\n", size_message );
-                memset(buffer, 0, TOTAL_SIZE);
-                memcpy(buffer, &code, CODE_LENGTH);
-                memcpy(buffer + CODE_LENGTH, &size_message , MESSAGE_LENGTH);
-                memcpy(buffer + HEADER_LENGTH, data, strlen(data));
-                printf("Size data %d\n", strlen(data));
+                send_message(sockfd, code, data);
                 break;
             case 2:
                 code = htons(200);
@@ -64,21 +57,12 @@ int main(int argc, char **argv)
 
             case 6:
                 code = htons(600);
-                size_message = htons(strlen(data));
-                memset(buffer, 0, TOTAL_SIZE);
-                memcpy(buffer, &code, CODE_LENGTH);
-                memcpy(buffer + CODE_LENGTH, &size_message , MESSAGE_LENGTH);
-                memcpy(buffer + HEADER_LENGTH, data, strlen(data));
+                send_message(sockfd, code, data);
                 break;
 
             default:
                 printf("El número ingresado no concuerda con ninguna opción.\n");
                 break;
-        }
-
-        if ( (send(sockfd, buffer, HEADER_LENGTH + strlen(data), 0)) == -1){
-            perror("send");
-            exit(EXIT_FAILURE);
         }
 
         memset(data, 0, strlen(data));
@@ -135,5 +119,25 @@ void show_options(int *option){
     printf("Elija opción: \n");
     scanf("%d", option);
     printf("\n");
+
+}
+
+void send_message(int sockfd, uint16_t code, char* data){
+    char buffer[TOTAL_SIZE];
+    uint16_t size_message=0;
+
+    size_message = htons(strlen(data));
+    printf("Data: %s\n", data);
+    printf("Total size message: %u\n", size_message );
+    memset(buffer, 0, TOTAL_SIZE);
+    memcpy(buffer, &code, HEADER_CODE_LENGTH);
+    memcpy(buffer + HEADER_SIZE_LENGTH, &size_message , HEADER_SIZE_LENGTH);
+    memcpy(buffer + HEADER_TOTAL_LENGTH, data, strlen(data));
+    printf("Size data %d\n", strlen(data));
+
+    if ( (send(sockfd, buffer, HEADER_TOTAL_LENGTH + strlen(data), 0)) == -1){
+        perror("send");
+        exit(EXIT_FAILURE);
+    }
 
 }

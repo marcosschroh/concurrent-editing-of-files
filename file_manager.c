@@ -6,13 +6,13 @@
 #include "include/protocol.h"
 #include "include/file_manager.h"
 
-void create_file(int sock, u_int16_t size_message, char message_recive[]){
+int create_file(int sock, u_int16_t size_message, char message_recive[]){
     char* response;
     char* file_path;
     FILE* archivo;
 
-    file_path = malloc(12);
-    memset(file_path, 0, 12);
+    file_path = malloc(strlen(FILES_STORE_DIR ));
+    memset(file_path, 0, strlen(FILES_STORE_DIR ));
 
     response = malloc(MAX_DATA_SIZE);
     memset(response, 0, MAX_DATA_SIZE);
@@ -25,14 +25,8 @@ void create_file(int sock, u_int16_t size_message, char message_recive[]){
     if((archivo = fopen(file_path, "r")) == NULL){
         archivo = fopen(file_path, "w");
         fclose(archivo);
-        //id = 1;
-        //datos = "El archivo fue creado.";
-        printf("Archivo creado\n");
-    }else{
-        printf("El Archivo ya existe\n");
-            //datos = "Ya existe un archivo con ese nombre.";
+        return 1;
     }
-        //longitud = strlen(datos);
 
-        //enviar(sock, 1, id, 0, 0, longitud, datos);
+    return 0;
 }

@@ -6,3 +6,4 @@ int start_server();
 void *connection_handler(void *);
 int create_dir();
 void crear_archivo(int, u_int16_t, char[]);
+void send_message(int, uint16_t, char[]);

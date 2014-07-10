@@ -21,9 +21,10 @@
 #define CREATE_FILE 100
 #define DELETE_FILE 200
 #define FILE_LIST   300
-#define SEND_DATA   400
-#define RECIVE_FILE 500
-#define EXIT        600
+#define KEEP_FILE   400
+#define UPDATE_FILE 500
+#define GET_FILE    600
+#define EXIT        700
 
 int read_n_bytes(int, void *, int);
 int parse_message(int, uint16_t *, uint16_t *, char []);

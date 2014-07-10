@@ -87,18 +87,18 @@ void *connection_handler(void *param_thread)
     //Get the socket descriptor
     int sock_client;
     int total_read;
-    int end = 1;
     struct parameters_to_thread *parameters;
     //char *message , client_message[MAXBUFFERSIZE];
     uint16_t code=0, size_message=0;
     char buffer[TOTAL_SIZE]="\0", message_recive[MAX_DATA_SIZE]="\0"; // Store the daya recived.
-    char message_send[MAX_DATA_SIZE] = "\0";
+    char message_send[MAX_DATA_SIZE]="\0";
+    char file_kept[MAX_DATA_SIZE]="\0";
 
     parameters = (struct parameters_to_thread *) param_thread;
     sock_client = parameters->sock_client;
 
     //Receive a message from client
-    while (code != 600){
+    while (code != EXIT){
 
         total_read = parse_message(sock_client, &code, &size_message, message_recive);
 
@@ -115,19 +115,32 @@ void *connection_handler(void *param_thread)
         printf("The data is: %s\n", message_recive);
         printf("Total bytes read is: %d\n", total_read);
 */
-        //memset(message_recive, 0, MAX_DATA_SIZE);
+        memset(message_send, 0, MAX_DATA_SIZE);
 
         switch (code){
-            case 100:
+            case CREATE_FILE:
                 strcpy(message_send, "The File already exist");
                 if (create_file(sock_client, size_message, message_recive) == 1){
                     strcpy(message_send, "File created with success");
                 }
-                printf("%s\n", message_send);
+                send_message(sock_client, htons(CREATE_FILE), message_send);
                 break;
 
-            case 600:
+            case KEEP_FILE:
+                strcpy(file_kept, message_recive);
+                strcpy(message_send, "File kept with sucess");
+                send_message(sock_client, htons(KEEP_FILE), message_send);
+                break;
+
+            case FILE_LIST:
+                list_files(message_send);
+                send_message(sock_client, htons(FILE_LIST), message_send);
+                break;
+
+            case EXIT:
                 printf("Bye\n");
+                strcpy(message_send, "Close program....");
+                send_message(sock_client, htons(EXIT), message_send);
                 break;
         }
 
@@ -151,3 +164,19 @@ int create_dir()
     return 1;
 }
 
+void send_message(int sockfd, uint16_t code, char data[]){
+    char buffer[TOTAL_SIZE];
+    uint16_t size_message=0;
+
+    size_message = htons(strlen(data));
+    memset(buffer, 0, TOTAL_SIZE);
+    memcpy(buffer, &code, HEADER_CODE_LENGTH);
+    memcpy(buffer + HEADER_SIZE_LENGTH, &size_message , HEADER_SIZE_LENGTH);
+    memcpy(buffer + HEADER_TOTAL_LENGTH, data, strlen(data));
+
+    if ( (send(sockfd, buffer, HEADER_TOTAL_LENGTH + strlen(data), 0)) == -1){
+        perror("send");
+        exit(EXIT_FAILURE);
+    }
+
+}

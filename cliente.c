@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     sockfd = start_client(argv[1]);
     data = malloc(MAX_DATA_SIZE);
 
-    while(code != htons(600) ) {
+    while(code != htons(EXIT) ) {
 
         memset(data, 0, MAX_DATA_SIZE);
         show_options(&option);
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
         switch (option) {
 
             case 1:
-                code = htons(100);
+                code = htons(CREATE_FILE);
                 printf("Enter the name of the file\n");
                 scanf("%s", data);
                 send_message(sockfd, code, data);
@@ -44,19 +44,23 @@ int main(int argc, char **argv)
                 break;
 
             case 3:
-                code = htons(300);
+                code = htons(FILE_LIST);
+                send_message(sockfd, code, data);
                 break;
 
             case 4:
-                code = htons(400);
+                code = htons(KEEP_FILE);
+                printf("Enter the name of the file\n");
+                scanf("%s", data);
+                send_message(sockfd, code, data);
                 break;
 
             case 5:
                 code = htons(500);
                 break;
 
-            case 6:
-                code = htons(600);
+            case 7:
+                code = htons(EXIT);
                 send_message(sockfd, code, data);
                 break;
 
@@ -65,6 +69,7 @@ int main(int argc, char **argv)
                 break;
         }
 
+        listen_server(sockfd);
         memset(data, 0, strlen(data));
     }
 
@@ -113,9 +118,10 @@ void show_options(int *option){
     printf("1- Crear archivo.\n");
     printf("2- Borrar archivo.\n");
     printf("3- Solicitar lista.\n");
-    printf("4- Enviar datos.\n");
-    printf("5- Recibir datos.\n");
-    printf("6- Para salir.\n\n");
+    printf("4- Keep archivo.\n");
+    printf("5- Enviar datos.\n");
+    printf("6- Recibir datos.\n");
+    printf("7- Para salir.\n\n");
     printf("Elija opción: \n");
     scanf("%d", option);
     printf("\n");
@@ -127,17 +133,51 @@ void send_message(int sockfd, uint16_t code, char* data){
     uint16_t size_message=0;
 
     size_message = htons(strlen(data));
-    printf("Data: %s\n", data);
-    printf("Total size message: %u\n", size_message );
+    //printf("Data: %s\n", data);
+    //printf("Total size message: %u\n", size_message );
     memset(buffer, 0, TOTAL_SIZE);
     memcpy(buffer, &code, HEADER_CODE_LENGTH);
     memcpy(buffer + HEADER_SIZE_LENGTH, &size_message , HEADER_SIZE_LENGTH);
     memcpy(buffer + HEADER_TOTAL_LENGTH, data, strlen(data));
-    printf("Size data %d\n", strlen(data));
+    //printf("Size data %d\n", strlen(data));
 
     if ( (send(sockfd, buffer, HEADER_TOTAL_LENGTH + strlen(data), 0)) == -1){
         perror("send");
         exit(EXIT_FAILURE);
     }
+
+}
+
+void listen_server(int sockfd){
+    int total_read;
+    char message_recive[MAX_DATA_SIZE]="\0";
+    uint16_t code=0, size_message=0;
+
+    total_read = parse_message(sockfd, &code, &size_message, message_recive);
+
+    switch (code){
+        case CREATE_FILE:
+            printf("Data Recived: %s\n", message_recive);
+            break;
+
+        case FILE_LIST:
+            printf("Files stored in the server: %s\n", message_recive);
+            break;
+
+        case KEEP_FILE:
+            printf("%s\n", message_recive);
+            break;
+
+        case EXIT:
+            printf("%s\n", message_recive);
+            close(sockfd);
+            break;
+
+        default:
+            printf("Invalid Option\n");
+            break;
+    }
+
+    //printf("Total bytes read is: %d\n", total_read);
 
 }

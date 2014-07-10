@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <netinet/in.h> //uint16_t
+#include <dirent.h> // to list files in a DIR
 
 #include "include/protocol.h"
 #include "include/file_manager.h"
@@ -20,7 +21,7 @@ int create_file(int sock, u_int16_t size_message, char message_recive[]){
     strcpy(file_path, FILES_STORE_DIR);
     strcat(file_path, "/");
     strcat(file_path, message_recive);
-    printf("The file name is: %s\n", file_path);
+    //printf("The file name is: %s\n", file_path);
 
     if((archivo = fopen(file_path, "r")) == NULL){
         archivo = fopen(file_path, "w");
@@ -29,4 +30,22 @@ int create_file(int sock, u_int16_t size_message, char message_recive[]){
     }
 
     return 0;
+}
+
+void list_files(char array_list[]){
+    DIR* d;
+    struct dirent *dir;
+    d = opendir(FILES_STORE_DIR);
+
+    if (d){
+        while ((dir = readdir(d)) != NULL){
+          //printf("%s\n", dir->d_name);
+          //printf("%s\n", dir->d_type);
+          strcat(array_list, dir->d_name);
+          strcat(array_list, " ");
+        }
+
+    closedir(d);
+  }
+
 }

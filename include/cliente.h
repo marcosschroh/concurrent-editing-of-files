@@ -4,3 +4,4 @@
 int start_client(char *);
 void show_options(int *);
 void send_message(int, uint16_t, char* );
+void listen_server(int);

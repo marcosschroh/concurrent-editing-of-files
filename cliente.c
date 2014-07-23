@@ -10,7 +10,6 @@
 #include "include/cliente.h"
 #include "include/protocol.h"
 
-
 int main(int argc, char **argv)
 {
     int sockfd; //File Descriptor del Socket.
@@ -56,7 +55,10 @@ int main(int argc, char **argv)
                 break;
 
             case 5:
-                code = htons(500);
+                code = htons(UPDATE_FILE);
+                printf("Enter the data to edit the file kept\n");
+                scanf("%s", data);
+                send_message(sockfd, code, data);
                 break;
 
             case 7:
@@ -165,6 +167,10 @@ void listen_server(int sockfd){
             break;
 
         case KEEP_FILE:
+            printf("%s\n", message_recive);
+            break;
+
+        case UPDATE_FILE:
             printf("%s\n", message_recive);
             break;
 

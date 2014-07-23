@@ -120,21 +120,36 @@ void *connection_handler(void *param_thread)
         switch (code){
             case CREATE_FILE:
                 strcpy(message_send, "The File already exist");
-                if (create_file(sock_client, size_message, message_recive) == 1){
+                if (create_file(message_recive) == 1){
                     strcpy(message_send, "File created with success");
                 }
                 send_message(sock_client, htons(CREATE_FILE), message_send);
                 break;
 
             case KEEP_FILE:
-                strcpy(file_kept, message_recive);
-                strcpy(message_send, "File kept with sucess");
+                if (file_exist(message_recive) == 1){
+                    strcpy(file_kept, message_recive);
+                    strcpy(message_send, "File kept with success");
+                }else{
+                    strcpy(message_send, "File don't exist");
+                }
                 send_message(sock_client, htons(KEEP_FILE), message_send);
                 break;
 
             case FILE_LIST:
                 list_files(message_send);
                 send_message(sock_client, htons(FILE_LIST), message_send);
+                break;
+
+            case UPDATE_FILE:
+                if (strlen(file_kept) > 0 ){
+                    if (update_file(file_kept, message_recive) == 1){
+                        strcpy(message_send, "File edited with success");
+                    }
+                }else{
+                    strcpy(message_send, "You have to keep the a file first");
+                }
+                send_message(sock_client, htons(UPDATE_FILE), message_send);
                 break;
 
             case EXIT:

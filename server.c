@@ -7,10 +7,16 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #include "include/server.h"
 #include "include/protocol.h"
 #include "include/file_manager.h"
+
+struct lock {
+    char file_name[50];
+    pthread_mutex_t var_lock;
+};
 
 struct parameters_to_thread {
     int sock_client;
@@ -48,9 +54,11 @@ int main(int argc, char **argv)
     return 0;
 }
 
+
 int start_server(){
     struct sockaddr_in server;
     int sockfd;
+    struct lock array_of_locks[10];
 
     printf("Starting server....\n");
 

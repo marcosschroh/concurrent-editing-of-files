@@ -3,6 +3,7 @@
 #include <string.h>
 #include <netinet/in.h> //uint16_t
 #include <dirent.h> // to list files in a DIR
+#include <fcntl.h> //
 
 #include "include/protocol.h"
 #include "include/file_manager.h"
@@ -52,19 +53,47 @@ int file_exist(char file_name[]){
 
 
 int update_file(char file_name[], char data[]){
-    FILE* archivo;
+    //FILE* archivo;
+    int pfd; /* Integer for file descriptor returned by open() call. */
     char* file_path;
+    struct flock lock;
 
     file_path = get_file_path(file_name);
 
-    if((archivo = fopen(file_path, "a")) != NULL){
-        fprintf(archivo, " ");
-        fprintf(archivo, data);
-        fclose(archivo);
+    if((pfd = open(file_path, O_WRONLY)) != -1){
+
+        /* Initialize the flock structure.  */
+        memset(&lock, 0, sizeof(lock));
+
+        lock.l_type = F_WRLCK;
+
+        printf ("Locked the file %s...\n\n",file_path);
+
+        /* Place a write lock on the file.  */
+        fcntl(pfd, F_SETLKW, &lock);
+
+        //printf("Data recived: %s\n\n", data);
+
+        //The sleep is use to test the concurrent editing!!!
+        //sleep(25);
+
+        printf("Editing...\n\n");
+
+        lseek(pfd, 0, SEEK_END);
+        write(pfd, " ", 1);
+        write(pfd, data, strlen(data));
+
+        /* Release the lock.  */
+        lock.l_type = F_UNLCK;
+        fcntl(pfd, F_SETLKW, &lock);
+
+        printf ("Unlocking\n\n");
+
+        close(pfd);
     }
 
-    printf("The file name is: %s\n", file_path);
-    printf("The data is: %s\n", data);
+    //printf("The file name is: %s\n", file_path);
+    //printf("The data is: %s\n", data);
     return 1;
 }
 

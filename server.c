@@ -13,14 +13,10 @@
 #include "include/protocol.h"
 #include "include/file_manager.h"
 
-struct lock {
-    char file_name[50];
-    pthread_mutex_t var_lock;
-};
-
 struct parameters_to_thread {
     int sock_client;
 };
+
 
 int main(int argc, char **argv)
 {
@@ -58,7 +54,6 @@ int main(int argc, char **argv)
 int start_server(){
     struct sockaddr_in server;
     int sockfd;
-    struct lock array_of_locks[10];
 
     printf("Starting server....\n");
 
@@ -137,6 +132,7 @@ void *connection_handler(void *param_thread)
             case KEEP_FILE:
                 if (file_exist(message_recive) == 1){
                     strcpy(file_kept, message_recive);
+                    printf("%s\n", file_kept);
                     strcpy(message_send, "File kept with success");
                 }else{
                     strcpy(message_send, "File don't exist");
@@ -152,9 +148,13 @@ void *connection_handler(void *param_thread)
             case UPDATE_FILE:
                 if (strlen(file_kept) > 0 ){
                     if (update_file(file_kept, message_recive) == 1){
-                        strcpy(message_send, "File edited with success");
+                            strcpy(message_send, "File edited with success");
                     }
-                }else{
+                    else{
+                        strcpy(message_send, "The file is being editing by other user");
+                    }
+                }
+                else{
                     strcpy(message_send, "You have to keep the a file first");
                 }
                 send_message(sock_client, htons(UPDATE_FILE), message_send);

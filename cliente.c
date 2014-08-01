@@ -116,6 +116,7 @@ int start_client(char *server_name){
 
 void show_options(int *option){
 
+    printf("####OPTIONS####\n");
     printf("\n");
     printf("1- Crear archivo.\n");
     printf("2- Borrar archivo.\n");
@@ -157,6 +158,8 @@ void listen_server(int sockfd){
 
     total_read = parse_message(sockfd, &code, &size_message, message_recive);
 
+    printf("####RESPONSE####\n");
+
     switch (code){
         case CREATE_FILE:
             printf("Data Recived: %s\n", message_recive);
@@ -184,6 +187,7 @@ void listen_server(int sockfd){
             break;
     }
 
+    printf("\n");
     //printf("Total bytes read is: %d\n", total_read);
 
 }

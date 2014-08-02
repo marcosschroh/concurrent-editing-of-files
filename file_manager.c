@@ -51,7 +51,6 @@ int file_exist(char file_name[]){
     return 1;
 }
 
-
 int update_file(char file_name[], char data[]){
     //FILE* archivo;
     int pfd; /* Integer for file descriptor returned by open() call. */
@@ -65,6 +64,7 @@ int update_file(char file_name[], char data[]){
         /* Initialize the flock structure.  */
         memset(&lock, 0, sizeof(lock));
 
+        //Look Write
         lock.l_type = F_WRLCK;
 
         printf ("Locked the file %s...\n\n",file_path);
@@ -96,6 +96,45 @@ int update_file(char file_name[], char data[]){
     //printf("The data is: %s\n", data);
     return 1;
 }
+
+void get_file(char file_name[], char file_content[]){
+    char* file_path;
+    int pfd; /* Integer for file descriptor returned by open() call. */
+    int fsize = 0;
+    struct flock lock;
+    //char file_content[];
+
+    file_path = get_file_path(file_name);
+
+    pfd = open(file_path, O_RDONLY);
+
+    /* Initialize the flock structure.  */
+    memset(&lock, 0, sizeof(lock));
+
+    //Look Read Only (read shared)
+    lock.l_type = F_RDLCK;
+
+    fcntl(pfd, F_SETLKW, &lock);
+
+    fsize = lseek(pfd, 0, SEEK_SET);
+
+    //file_content = malloc(sizeof(char) * SEEK_END);
+    //file_content = malloc(fsize);
+
+    //memset(&file_content, 0, fsize);
+
+    // Read the dataa in the file
+    read(pfd, file_content, fsize -1);
+
+    /* Release the lock.  */
+    lock.l_type = F_UNLCK;
+    fcntl(pfd, F_SETLKW, &lock);
+
+    close(pfd);
+
+    return;
+}
+
 
 void list_files(char array_list[]){
     DIR* d;

@@ -61,6 +61,13 @@ int main(int argc, char **argv)
                 send_message(sockfd, code, data);
                 break;
 
+            case 6:
+                code = htons(DOWNLOAD_FILE);
+                printf("Enter the name of the file to download\n");
+                scanf("%s", data);
+                send_message(sockfd, code, data);
+                break;
+
             case 7:
                 code = htons(EXIT);
                 send_message(sockfd, code, data);
@@ -123,7 +130,7 @@ void show_options(int *option){
     printf("3- Solicitar lista.\n");
     printf("4- Keep archivo.\n");
     printf("5- Enviar datos.\n");
-    printf("6- Recibir datos.\n");
+    printf("6- Descargar archivo.\n");
     printf("7- Para salir.\n\n");
     printf("Elija opción: \n");
     scanf("%d", option);
@@ -174,6 +181,11 @@ void listen_server(int sockfd){
             break;
 
         case UPDATE_FILE:
+            printf("%s\n", message_recive);
+            break;
+
+        case DOWNLOAD_FILE:
+            printf("The data in te file is:\n");
             printf("%s\n", message_recive);
             break;
 

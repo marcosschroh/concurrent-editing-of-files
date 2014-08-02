@@ -5,3 +5,4 @@ void list_files(char []);
 int update_file(char [], char []);
 int file_exist(char []);
 char* get_file_path(char[]);
+void get_file(char [], char[]);

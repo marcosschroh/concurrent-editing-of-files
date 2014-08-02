@@ -23,7 +23,7 @@
 #define FILE_LIST   300
 #define KEEP_FILE   400
 #define UPDATE_FILE 500
-#define GET_FILE    600
+#define DOWNLOAD_FILE 600
 #define EXIT        700
 
 int read_n_bytes(int, void *, int);

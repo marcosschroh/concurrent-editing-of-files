@@ -160,6 +160,12 @@ void *connection_handler(void *param_thread)
                 send_message(sock_client, htons(UPDATE_FILE), message_send);
                 break;
 
+            case DOWNLOAD_FILE:
+                //strcpy(message_send, "Downloading....");
+                get_file(message_recive, message_send);
+                send_message(sock_client, htons(DOWNLOAD_FILE), message_send);
+                break;
+
             case EXIT:
                 printf("Bye\n");
                 strcpy(message_send, "Close program....");

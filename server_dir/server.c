@@ -27,9 +27,6 @@ int main(int argc, char **argv)
     struct parameters_to_thread *param_thread;
     pthread_t tid; // Data types to store the data recived on a thread.
 
-
-    create_dir();
-
     sockfd = start_server();
     sin_size = sizeof(struct sockaddr_in);
 
@@ -56,6 +53,9 @@ int start_server(){
     int sockfd;
 
     printf("Starting server....\n");
+
+    //creating dir to store the share files
+    create_dir();
 
     //create the socket.
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -161,8 +161,13 @@ void *connection_handler(void *param_thread)
                 break;
 
             case DOWNLOAD_FILE:
+                if (file_exist(message_recive) == 1){
                 //strcpy(message_send, "Downloading....");
-                get_file(message_recive, message_send);
+                    get_file(message_recive, message_send);
+                }
+                else{
+                    strcpy(message_send, "File don't exist");
+                }
                 send_message(sock_client, htons(DOWNLOAD_FILE), message_send);
                 break;
 

@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -6,9 +7,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include<netdb.h>    //hostent
+#include <sys/stat.h>
 
 #include "include/cliente.h"
 #include "include/protocol.h"
+#include "include/file_manager.h"
+
+//VARIABLES GLOBALES
+char* file_to_download; //variable almacenada para saber que archivo vamos a bajar
 
 int main(int argc, char **argv)
 {
@@ -24,6 +30,8 @@ int main(int argc, char **argv)
 
     sockfd = start_client(argv[1]);
     data = malloc(MAX_DATA_SIZE);
+    file_to_download = malloc(50);
+    memset(file_to_download, 0, 50);
 
     while(code != htons(EXIT) ) {
 
@@ -65,6 +73,7 @@ int main(int argc, char **argv)
                 code = htons(DOWNLOAD_FILE);
                 printf("Enter the name of the file to download\n");
                 scanf("%s", data);
+                file_to_download = data;
                 send_message(sockfd, code, data);
                 break;
 
@@ -94,6 +103,9 @@ int start_client(char *server_name){
 
     printf("Iniciando el cliente...\n");
 
+    //creating dir to store the downloads
+    create_dir_downloads();
+
     if ( (he=gethostbyname(server_name) ) == NULL ) {
         perror("gethostbyname");
         exit(1);
@@ -118,6 +130,7 @@ int start_client(char *server_name){
             perror("Connect");
             exit(EXIT_FAILURE);
         }
+
         return sockfd;
 }
 
@@ -185,8 +198,13 @@ void listen_server(int sockfd){
             break;
 
         case DOWNLOAD_FILE:
-            printf("The data in te file is:\n");
-            printf("%s\n", message_recive);
+            create_file(file_to_download);
+            if ( update_file(file_to_download, message_recive) == 1){
+                printf("The file %s was downloaded...\n", file_to_download);
+                break;
+            }
+
+            printf("The file %s cannot be downloaded...\n", file_to_download);
             break;
 
         case EXIT:
@@ -202,4 +220,16 @@ void listen_server(int sockfd){
     printf("\n");
     //printf("Total bytes read is: %d\n", total_read);
 
+}
+
+
+int create_dir_downloads()
+{
+    struct stat info;
+
+    if ( mkdir(FILES_STORE_DIR, 0777) == 0){
+        printf("Creating directory to downloads the files....\n");
+    }
+
+    return 1;
 }

@@ -3,15 +3,6 @@
 #define MYPORT 3490
 #define LENGHT_LOCKS 2
 
-
-/*
-struct Lock {
-    char file_name[50];
-    int position_empty;
-    pthread_mutex_t var_lock;
-};
-*/
-
 int start_server();
 void *connection_handler(void *);
 int create_dir();

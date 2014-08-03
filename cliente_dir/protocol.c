@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <netinet/in.h> //uint16_t
-
 #include <string.h>
 
 #include "include/protocol.h"

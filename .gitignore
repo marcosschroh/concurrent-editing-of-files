@@ -1,3 +1,4 @@
 cliente
 server
 files_store/
+*.o

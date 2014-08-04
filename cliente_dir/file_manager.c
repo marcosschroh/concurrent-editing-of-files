@@ -55,39 +55,15 @@ int update_file(char file_name[], char data[]){
     //FILE* archivo;
     int pfd; /* Integer for file descriptor returned by open() call. */
     char* file_path;
-    struct flock lock;
 
     file_path = get_file_path(file_name);
 
     if((pfd = open(file_path, O_WRONLY)) != -1){
 
-        /* Initialize the flock structure.  */
-        memset(&lock, 0, sizeof(lock));
-
-        //Look Write
-        lock.l_type = F_WRLCK;
-
-        printf ("Locked the file %s...\n\n",file_path);
-
-        /* Place a write lock on the file.  */
-        fcntl(pfd, F_SETLKW, &lock);
-
-        //printf("Data recived: %s\n\n", data);
-
-        //The sleep is use to test the concurrent editing!!!
-        //sleep(25);
-
         printf("Editing...\n\n");
 
-        lseek(pfd, 0, SEEK_END);
-        write(pfd, " ", 1);
+        lseek(pfd, 0, SEEK_SET);
         write(pfd, data, strlen(data));
-
-        /* Release the lock.  */
-        lock.l_type = F_UNLCK;
-        fcntl(pfd, F_SETLKW, &lock);
-
-        printf ("Unlocking\n\n");
 
         close(pfd);
 
@@ -97,61 +73,4 @@ int update_file(char file_name[], char data[]){
     //printf("The file name is: %s\n", file_path);
     //printf("The data is: %s\n", data);
     return 0;
-}
-
-void get_file(char file_name[], char file_content[]){
-    char* file_path;
-    int pfd; /* Integer for file descriptor returned by open() call. */
-    int fsize = 0;
-    struct flock lock;
-    //char file_content[];
-
-    file_path = get_file_path(file_name);
-
-    pfd = open(file_path, O_RDONLY);
-
-    /* Initialize the flock structure.  */
-    memset(&lock, 0, sizeof(lock));
-
-    //Look Read Only (read shared)
-    lock.l_type = F_RDLCK;
-
-    fcntl(pfd, F_SETLKW, &lock);
-
-    fsize = lseek(pfd, 0, SEEK_SET);
-
-    //file_content = malloc(sizeof(char) * SEEK_END);
-    //file_content = malloc(fsize);
-
-    //memset(&file_content, 0, fsize);
-
-    // Read the dataa in the file
-    read(pfd, file_content, fsize -1);
-
-    /* Release the lock.  */
-    lock.l_type = F_UNLCK;
-    fcntl(pfd, F_SETLKW, &lock);
-
-    close(pfd);
-
-    return;
-}
-
-
-void list_files(char array_list[]){
-    DIR* d;
-    struct dirent *dir;
-    d = opendir(FILES_STORE_DIR);
-
-    if (d){
-        while ((dir = readdir(d)) != NULL){
-          //printf("%s\n", dir->d_name);
-          //printf("%s\n", dir->d_type);
-          strcat(array_list, dir->d_name);
-          strcat(array_list, " ");
-        }
-
-    closedir(d);
-  }
-
 }

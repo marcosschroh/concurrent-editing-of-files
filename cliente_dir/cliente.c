@@ -199,6 +199,11 @@ void listen_server(int sockfd){
             break;
 
         case DOWNLOAD_FILE:
+            if ( strcmp(message_recive, FILE_DOESNT_EXIST) == 0){
+                printf("The file %s doesn't exist in the server...\n", file_to_download);
+                break;
+            }
+
             create_file(file_to_download);
             if ( update_file(file_to_download, message_recive) == 1){
                 printf("The file %s was downloaded...\n", file_to_download);

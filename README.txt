@@ -22,3 +22,7 @@ EXTRA:
 
 Para remover los archivos y complilar de nuevo hacer
 make clean (ya sea en el directorio server_dir o cliente_dir)
+
+Los archivos en el servidor se almacenan en el directorio files_store.
+
+Los archivos descargados en el cliente se almacenan en el directorio files_store.

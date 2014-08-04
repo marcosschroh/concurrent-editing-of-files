@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     uint16_t code=0;
 
     if (argc != 2) {
-        fprintf(stderr,"usage: give a Client Hostname\n");
+        fprintf(stderr,"usage: give the server ip\n");
         exit(1);
     }
 
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-int start_client(char *server_name){
+int start_client(char *server_ip){
 
     struct sockaddr_in server; // server’s address information
     int sockfd, i;
@@ -106,13 +106,13 @@ int start_client(char *server_name){
     //creating dir to store the downloads
     create_dir_downloads();
 
-    if ( (he=gethostbyname(server_name) ) == NULL ) {
-        perror("gethostbyname");
-        exit(1);
-    }
+    //if ( (he=gethostbyname(server_name) ) == NULL ) {
+        ////perror("gethostbyname");
+        //exit(1);
+    //}
 
-    printf("resolved to : %s\n" , server_name);
-    printf("IP Address is: %s\n\n", inet_ntoa(*((struct in_addr *)he->h_addr)));
+    //printf("resolved to : %s\n" , server_name);
+    //printf("IP Address is: %s\n\n", inet_ntoa(*((struct in_addr *)he->h_addr)));
 
     //Create the socket.
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -123,7 +123,8 @@ int start_client(char *server_name){
         memset(&server, 0, sizeof(server)); // zero the rest of the struct
         server.sin_family = AF_INET; // host byte order
         server.sin_port = htons(MYPORT); // short, network byte order
-        server.sin_addr = *((struct in_addr *)he->h_addr);
+        //server.sin_addr = *((struct in_addr *)he->h_addr);
+        server.sin_addr.s_addr = inet_addr(server_ip);
 
         //Conectamos con el servidor.
         if (connect(sockfd, (struct sockaddr *)&server, sizeof(server)) == -1) {

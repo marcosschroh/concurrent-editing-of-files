@@ -36,6 +36,7 @@
 #define SUCCESS_FILE_CREATED "File created with success"
 #define SUCCESS_FILE_KEPT "File kept with success"
 #define SUCCESS_FILE_EDITED "File edited with success"
+#define SUCCESS_EXIT "Exit with success"
 
 
 int read_n_bytes(int, void *, int);

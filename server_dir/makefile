@@ -18,3 +18,4 @@ file_manager.o: file_manager.c include/protocol.h include/file_manager.h
 
 clean:
 	rm -f server server.o protocol.o file_manager.o
+	rm -rf files_store

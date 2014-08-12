@@ -173,7 +173,7 @@ void *connection_handler(void *param_thread)
 
             case EXIT:
                 printf("Bye\n");
-                strcpy(message_send, ERROR_FILE_DOESNT_EXIST);
+                strcpy(message_send, SUCCESS_EXIT);
                 send_message(sock_client, htons(EXIT), message_send);
                 break;
         }

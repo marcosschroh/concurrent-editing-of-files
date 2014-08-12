@@ -122,9 +122,9 @@ void *connection_handler(void *param_thread)
 
         switch (code){
             case CREATE_FILE:
-                strcpy(message_send, "The File already exist");
+                strcpy(message_send, ERROR_FILE_ALREADY_EXISTS);
                 if (create_file(message_recive) == 1){
-                    strcpy(message_send, "File created with success");
+                    strcpy(message_send, SUCCESS_FILE_CREATED);
                 }
                 send_message(sock_client, htons(CREATE_FILE), message_send);
                 break;
@@ -133,9 +133,9 @@ void *connection_handler(void *param_thread)
                 if (file_exist(message_recive) == 1){
                     strcpy(file_kept, message_recive);
                     printf("%s\n", file_kept);
-                    strcpy(message_send, "File kept with success");
+                    strcpy(message_send, SUCCESS_FILE_KEPT);
                 }else{
-                    strcpy(message_send, "File don't exist");
+                    strcpy(message_send, ERROR_FILE_DOESNT_EXIST);
                 }
                 send_message(sock_client, htons(KEEP_FILE), message_send);
                 break;
@@ -148,14 +148,14 @@ void *connection_handler(void *param_thread)
             case UPDATE_FILE:
                 if (strlen(file_kept) > 0 ){
                     if (update_file(file_kept, message_recive) == 1){
-                            strcpy(message_send, "File edited with success");
+                            strcpy(message_send, SUCCESS_FILE_EDITED);
                     }
                     else{
-                        strcpy(message_send, "The file is being editing by other user");
+                        strcpy(message_send, ERROR_FILE_EDITING_BY_OTHER);
                     }
                 }
                 else{
-                    strcpy(message_send, "You have to keep the a file first");
+                    strcpy(message_send, ERROR_FILE_KEPT_FIRST);
                 }
                 send_message(sock_client, htons(UPDATE_FILE), message_send);
                 break;
@@ -166,14 +166,14 @@ void *connection_handler(void *param_thread)
                     get_file(message_recive, message_send);
                 }
                 else{
-                    strcpy(message_send, "File don't exist");
+                    strcpy(message_send, ERROR_FILE_DOESNT_EXIST);
                 }
                 send_message(sock_client, htons(DOWNLOAD_FILE), message_send);
                 break;
 
             case EXIT:
                 printf("Bye\n");
-                strcpy(message_send, "Close program....");
+                strcpy(message_send, ERROR_FILE_DOESNT_EXIST);
                 send_message(sock_client, htons(EXIT), message_send);
                 break;
         }

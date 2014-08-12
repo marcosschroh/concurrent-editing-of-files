@@ -74,3 +74,24 @@ int update_file(char file_name[], char data[]){
     //printf("The data is: %s\n", data);
     return 0;
 }
+
+
+void list_files(){
+    DIR* d;
+    struct dirent *dir;
+    d = opendir(FILES_STORE_DIR);
+
+    if (d){
+        printf("The Files stored are:\n");
+
+        while ((dir = readdir(d)) != NULL){
+          printf("%s\n", dir->d_name);
+          //printf("%s\n", dir->d_type);
+          //strcat(array_list, dir->d_name);
+          //strcat(array_list, " ");
+        }
+
+    closedir(d);
+  }
+
+}

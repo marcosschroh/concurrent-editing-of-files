@@ -19,7 +19,7 @@
 
 // Codes
 #define CREATE_FILE 100
-#define DELETE_FILE 200
+//#define DELETE_FILE 200 //NOT IMPLEMENTED
 #define FILE_LIST   300
 #define KEEP_FILE   400
 #define UPDATE_FILE 500

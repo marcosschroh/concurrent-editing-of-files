@@ -47,7 +47,9 @@ int main(int argc, char **argv)
                 send_message(sockfd, code, data);
                 break;
             case 2:
-                code = htons(200);
+                //code = htons(200);
+                //This is used to list the files stored in our machine.
+                list_files();
                 break;
 
             case 3:
@@ -87,7 +89,11 @@ int main(int argc, char **argv)
                 break;
         }
 
-        listen_server(sockfd);
+        //Don't call the server if the option is 2.
+        //This option is only for local tasks.
+        if (option != 2)
+            listen_server(sockfd);
+
         memset(data, 0, strlen(data));
     }
 
@@ -140,7 +146,7 @@ void show_options(int *option){
     printf("####OPTIONS####\n");
     printf("\n");
     printf("1- Crear archivo.\n");
-    printf("2- Borrar archivo.\n");
+    printf("2- Mis Descargas.\n");
     printf("3- Solicitar lista.\n");
     printf("4- Keep archivo.\n");
     printf("5- Enviar datos.\n");
